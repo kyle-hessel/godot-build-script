@@ -37,6 +37,11 @@ else # if only rebuilding, simply rename existing godot folder.
     mv godot-* godot
 fi
 
+if [ $build_type == "rebuild" ]
+then
+    echo "Below settings should match previous builds (I need to learn how to cache this)."
+fi
+
 # build options
 echo "What platform are you building for? (linuxbsd, windows, server, etc.)"
 read platform
@@ -48,6 +53,12 @@ echo "Use Clang instead of GCC to compile? (yes/no)"
 read b_clang
 echo "Launch editor upon completion? (y/n)"
 read b_editor
+
+if [ $build_type == "rebuild" ]
+then
+    echo "Now cleaning up generated files from previous build."
+    scons --clean platform="$platform" target="$target" use_llvm="$b_clang" -j"$threadcount"
+fi
 
 if [ $build_type == "build" ]
 then
