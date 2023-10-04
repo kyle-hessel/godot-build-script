@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: .NET integration, export templates, PCK encryption, different architecture support, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: export templates, PCK encryption, different architecture support, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 # go to the correct folder (back one), remove old folders
 echo "Begin a new engine build or rebuild an existing one in this folder? (build/rebuild)"
@@ -34,6 +34,7 @@ else # if only rebuilding, simply rename existing godot folder.
     echo "Welcome to the Cult of the Blue Robot."
     echo "Choose your Godot version (e.g. 4.1-stable, 4.1, master)"
     read godot_version
+    cd ..
     mv godot-* godot
 fi
 
@@ -101,19 +102,16 @@ fi
 
 cd godot/
 
-if [ $build_type == "build" ]
+ # rename Godot folder appropriately (do this late to avoid errors)
+if [ $b_gd_steam == 'y' ] || [ $b_limboai == 'y' ] || [ $b_gd_voxel == 'y' ]
 then
-    # rename Godot folder appropriately (do this late to avoid errors)
-    if [ $b_gd_steam == 'y' ] || [ $b_limboai == 'y' ] || [ $b_gd_voxel == 'y' ]
-    then
-        mv ../godot ../godot-"$godot_version"-custom
-    else
-        mv ../godot ../godot-"$godot_version"
-    fi
+    mv ../godot ../godot-"$godot_version"-custom
+else
+    mv ../godot ../godot-"$godot_version"
 fi
 
 # doing this step before the later .NET steps below as this folder should be recreated by the build process, NOT removed after, contrary to what the docs imply.
-if [ $b_dotnet == 'yes' ]
+if [ $b_dotnet == 'yes' ] && [ $build_type == "build" ]
 then
     # clear godot C# NuGet package cache (see https://github.com/godotengine/godot/issues/44532 and note on Godot docs for compiling .NET)
     sudo rm -r ~/.local/share/godot/mono/GodotNuGetFallbackFolder
