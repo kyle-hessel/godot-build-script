@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: .NET integration, export templates, PCK encryption, different architecture support, more testing in different target modes, etc.
+# TODO: .NET integration, export templates, PCK encryption, different architecture support, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 # go to the correct folder (back one), remove old folders
 echo "Begin a new engine build or rebuild an existing one in this folder? (build/rebuild)"
@@ -49,6 +49,8 @@ echo "How many threads would you like to use for building?"
 read threadcount
 echo "What's the target? (editor/template_debug/template_release)"
 read target
+echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
+read b_dotnet
 echo "Use Clang instead of GCC to compile? (yes/no)"
 read b_clang
 echo "Launch editor upon completion? (y/n)"
@@ -57,7 +59,7 @@ read b_editor
 if [ $build_type == "rebuild" ]
 then
     echo "Now cleaning up generated files from previous build."
-    scons --clean platform="$platform" target="$target" use_llvm="$b_clang" -j"$threadcount"
+    scons --clean platform="$platform" target="$target" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 fi
 
 if [ $build_type == "build" ]
@@ -110,9 +112,16 @@ then
     fi
 fi
 
+# doing this step before the later .NET steps below as this folder should be recreated by the build process, NOT removed after, contrary to what the docs imply.
+if [ $b_dotnet == 'yes' ]
+then
+    # clear godot C# NuGet package cache (see https://github.com/godotengine/godot/issues/44532 and note on Godot docs for compiling .NET)
+    sudo rm -r ~/.local/share/godot/mono/GodotNuGetFallbackFolder
+fi
+
 echo "Now building Godot."
 
-scons platform="$platform" target="$target" use_llvm="$b_clang" -j"$threadcount"
+scons platform="$platform" target="$target" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 
 # final godotsteam setup if enabled
 if [ $build_type == 'build' ] && [ $b_gd_steam == 'y' ] 
@@ -125,11 +134,36 @@ then
     fi
 fi
 
+if [ $b_dotnet == 'yes' ]
+then
+    echo "Generating .NET glue."
+    ./bin/godot."$platform".editor.x86_64.mono --headless --generate-mono-glue modules/mono/glue
+    ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource
+fi
+
+cd bin/
 echo "Build complete! Enjoy your cult membership!"
 
 if [ $b_editor == 'y' ]
 then
     echo "Lauching Godot editor. Safe travels!"
-    cd bin/
-    ./godot."$platform".editor.x86_64
+
+    if [ $b_clang == 'yes' ]
+    then
+        if [ $b_dotnet == 'yes' ]
+        then
+            ./godot."$platform".editor.x86_64.llvm.mono
+        else
+            ./godot."$platform".editor.x86_64.llvm
+        fi
+    else
+        if [ $b_dotnet == 'yes' ]
+        then
+            ./godot."$platform".editor.x86_64.mono
+        else
+            ./godot."$platform".editor.x86_64
+        fi
+    fi
+else
+    ls
 fi
