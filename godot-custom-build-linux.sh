@@ -8,7 +8,7 @@ read build_type
 if [ $build_type == "build" ]
 then # if building, pick engine version and modules.
     cd ..
-    echo "Deleting any old builds from this folder."
+    echo "Deleting any old builds from owning folder."
     sudo rm -r godot-* godotsteam limboai voxel
 
     echo "Welcome to the Cult of the Blue Robot."
@@ -110,7 +110,7 @@ else
     mv ../godot ../godot-"$godot_version"
 fi
 
-# doing this step before the later .NET steps below as this folder should be recreated by the build process, NOT removed after, contrary to what the docs imply.
+# doing this step before the later .NET steps below as this folder should be removed first, NOT after, contrary to what the docs imply.
 if [ $b_dotnet == 'yes' ] && [ $build_type == "build" ]
 then
     # clear godot C# NuGet package cache (see https://github.com/godotengine/godot/issues/44532 and note on Godot docs for compiling .NET)
@@ -135,6 +135,7 @@ fi
 if [ $b_dotnet == 'yes' ]
 then
     echo "Generating .NET glue."
+    mkdir ~/.local/share/godot/mono/GodotNuGetFallbackFolder
     ./bin/godot."$platform".editor.x86_64.mono --headless --generate-mono-glue modules/mono/glue
     ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource
 fi
