@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: optimization levels, dev_build mode, debugging symbols, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: optimize old file deletion, optimization levels, debugging symbols, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -33,14 +33,17 @@ then
     read TEMPLATE_TYPE
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read B_DOTNET
-    echo "Enable dev_mode for warnings as errors and unit testing? (y/n)"
+    echo "Enable dev_mode for warnings as errors and unit testing? (y/n) This is useful when doing engine development. NOTE: seems to not play well with some modules."
     read B_DEVMODE
     if [ $B_DEVMODE == "n" ]
     then
-        echo "Enable production mode for better optimization and portability? (y/n)"
+        B_DEVBUILD="no"
+        echo "Enable production mode for better optimization and portability? (yes/no) This is useful for exporting final game builds."
         read B_OPTIMIZE
     else
         B_OPTIMIZE="n"
+        echo "Enable dev_build mode for disabling optimization and enabling debug symbols? (yes/no) Also useful for engine development. NOTE: seems to not play well with some modules."
+        read B_DEVBUILD
     fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
@@ -58,10 +61,10 @@ then
     echo "#### Now building native export template(s). ####"
     if [ $TEMPLATE_TYPE == 'BOTH' ]
     then
-        scons PLATFORM="$PLATFORM" ARCH="$ARCH" target=template_debug dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-        scons PLATFORM="$PLATFORM" ARCH="$ARCH" target=template_release dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     else
-        scons PLATFORM="$PLATFORM" ARCH="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     cd bin/
@@ -124,14 +127,17 @@ else
     fi
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read B_DOTNET
-    echo "Enable dev_mode for warnings as errors and unit testing? (y/n)"
+    echo "Enable dev_mode for warnings as errors and unit testing? (yes/no)"
     read B_DEVMODE
-    if [ $B_DEVMODE == "n" ]
+    if [ $B_DEVMODE == "no" ]
     then
-        echo "Enable production mode for better optimization and portability? (y/n)"
+        B_DEVBUILD="no"
+        echo "Enable production mode for better optimization and portability? (yes/no)"
         read B_OPTIMIZE
     else
-        B_OPTIMIZE="n"
+        B_OPTIMIZE="no"
+        echo "Enable dev_build mode for disabling optimization and enabling extra debug symbols? (yes/no) NOTE: seems to not play well with some modules."
+        read B_DEVBUILD
     fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
@@ -141,7 +147,7 @@ else
     if [ $BUILD_TYPE == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean PLATFORM="$PLATFORM" ARCH="$ARCH" dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     if [ $BUILD_TYPE == "build" ]
@@ -200,7 +206,7 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons PLATFORM="$PLATFORM" ARCH="$ARCH" target=editor dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
 
     # final godotsteam setup if enabled
     if [ $BUILD_TYPE == 'build' ] && [ $B_GD_STEAM == 'y' ] 
@@ -217,7 +223,12 @@ else
     then
         echo "#### Generating .NET glue. ####"
         mkdir ~/.local/share/godot/mono/GodotNuGetFallbackFolder
-        ./bin/godot."$PLATFORM".editor."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+        if [ $B_DEVBUILD == 'yes' ]
+        then
+            ./bin/godot."$PLATFORM".editor.dev."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+        else
+            ./bin/godot."$PLATFORM".editor."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+        fi
         ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource
     fi
 
@@ -226,10 +237,10 @@ else
         echo "#### Now building native export template(s). ####"
         if [ $TEMPLATE_TYPE == 'BOTH' ]
         then
-            scons PLATFORM="$PLATFORM" ARCH="$ARCH" target=template_debug dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-            scons PLATFORM="$PLATFORM" ARCH="$ARCH" target=template_release dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         else
-            scons PLATFORM="$PLATFORM" ARCH="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         fi
     fi
 
@@ -240,20 +251,40 @@ else
     then
         echo "#### Lauching Godot editor. Safe travels! ####"
 
-        if [ $B_CLANG == 'yes' ]
+        if [ $B_DEVBUILD == 'yes' ]
         then
-            if [ $B_DOTNET == 'yes' ]
+            if [ $B_CLANG == 'yes' ]
             then
-                ./godot."$PLATFORM".editor."$ARCH".llvm.mono
+                if [ $B_DOTNET == 'yes' ]
+                then
+                    ./godot."$PLATFORM".editor.dev."$ARCH".llvm.mono
+                else
+                    ./godot."$PLATFORM".editor.dev."$ARCH".llvm
+                fi
             else
-                ./godot."$PLATFORM".editor."$ARCH".llvm
+                if [ $B_DOTNET == 'yes' ]
+                then
+                    ./godot."$PLATFORM".editor.dev."$ARCH".mono
+                else
+                    ./godot."$PLATFORM".editor.dev."$ARCH"
+                fi
             fi
         else
-            if [ $B_DOTNET == 'yes' ]
+            if [ $B_CLANG == 'yes' ]
             then
-                ./godot."$PLATFORM".editor."$ARCH".mono
+                if [ $B_DOTNET == 'yes' ]
+                then
+                    ./godot."$PLATFORM".editor."$ARCH".llvm.mono
+                else
+                    ./godot."$PLATFORM".editor."$ARCH".llvm
+                fi
             else
-                ./godot."$PLATFORM".editor."$ARCH"
+                if [ $B_DOTNET == 'yes' ]
+                then
+                    ./godot."$PLATFORM".editor."$ARCH".mono
+                else
+                    ./godot."$PLATFORM".editor."$ARCH"
+                fi
             fi
         fi
     fi
