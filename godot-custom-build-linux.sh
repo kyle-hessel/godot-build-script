@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: export templates, PCK encryption, different architecture support, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: optimization levels, export templates, PCK encryption, different architecture support (not viable right now from the looks of things), more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 # go to the correct folder (back one), remove old folders
 echo "Begin a new engine build or rebuild an existing one in this folder? (build/rebuild)"
@@ -46,10 +46,17 @@ fi
 # build options
 echo "What platform are you building for? (linuxbsd, windows, server, etc.)"
 read platform
+echo "What architecture are you building on? (x86_64, arm64, rv64, wasm32, etc.)"
+read arch
 echo "How many threads would you like to use for building?"
 read threadcount
-echo "What's the target? (editor/template_debug/template_release)"
-read target
+echo "Build export templates? (y/n)"
+read templates
+if [ $templates = "y" ]
+then
+    echo "Choose template type (template_debug/template_release)"
+    read template_type
+fi
 echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
 read b_dotnet
 echo "Use Clang instead of GCC to compile? (yes/no)"
@@ -60,7 +67,7 @@ read b_editor
 if [ $build_type == "rebuild" ]
 then
     echo "Now cleaning up generated files from previous build."
-    scons --clean platform="$platform" target="$target" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+    scons --clean platform="$platform" arch="$arch" target=editor module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 fi
 
 if [ $build_type == "build" ]
@@ -72,7 +79,7 @@ then
     # clone modules, copy each into godot modules folder
     if [ $b_gd_steam == 'y' ] 
     then
-        git clone https://github.com/CoaguCo-Industries/GodotSteam.git -b v4.4
+        git clone https://github.com/CoaguCo-Industries/GodotSteam.git -b v4.4.1
         mv GodotSteam/ godotsteam/
         cp -rv godotsteam/ godot/modules/
         # steam SDK
@@ -119,7 +126,7 @@ fi
 
 echo "Now building Godot."
 
-scons platform="$platform" target="$target" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+scons platform="$platform" arch="$arch" target=editor module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 
 # final godotsteam setup if enabled
 if [ $build_type == 'build' ] && [ $b_gd_steam == 'y' ] 
@@ -136,8 +143,14 @@ if [ $b_dotnet == 'yes' ]
 then
     echo "Generating .NET glue."
     mkdir ~/.local/share/godot/mono/GodotNuGetFallbackFolder
-    ./bin/godot."$platform".editor.x86_64.mono --headless --generate-mono-glue modules/mono/glue
+    ./bin/godot."$platform".editor."$arch".mono --headless --generate-mono-glue modules/mono/glue
     ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource
+fi
+
+if [ $templates == 'y' ]
+then
+    echo "Now building export template(s)."
+    scons platform="$platform" arch="$arch" target="$template_type" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 fi
 
 cd bin/
@@ -151,18 +164,16 @@ then
     then
         if [ $b_dotnet == 'yes' ]
         then
-            ./godot."$platform".editor.x86_64.llvm.mono
+            ./godot."$platform".editor."$arch".llvm.mono
         else
-            ./godot."$platform".editor.x86_64.llvm
+            ./godot."$platform".editor."$arch".llvm
         fi
     else
         if [ $b_dotnet == 'yes' ]
         then
-            ./godot."$platform".editor.x86_64.mono
+            ./godot."$platform".editor."$arch".mono
         else
-            ./godot."$platform".editor.x86_64
+            ./godot."$platform".editor."$arch"
         fi
     fi
-else
-    ls
 fi
