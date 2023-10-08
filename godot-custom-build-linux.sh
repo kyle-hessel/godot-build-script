@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: optimization levels, export templates, PCK encryption, different architecture support (not viable right now from the looks of things), more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: optimization levels, dev_build mode, debugging symbols, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -19,7 +19,7 @@ then
 
     # build options
     echo "Below settings should match existing build (I need to learn how to cache this)."
-    echo "Choose your Godot version (e.g. 4.1-stable, 4.1, master)"
+    echo "Choose your Godot version (e.g. 4.1.2-stable, 4.1, master)"
     read godot_version
     echo "What platform are you building for? (linuxbsd, windows, server, etc.)"
     read platform
@@ -33,6 +33,15 @@ then
     read template_type
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read b_dotnet
+    echo "Enable dev_mode for warnings as errors and unit testing? (y/n)"
+    read b_devmode
+    if [ $b_devmode == "n" ]
+    then
+        echo "Enable production mode for better optimization and portability? (y/n)"
+        read b_optimize
+    else
+        b_optimize="n"
+    fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read b_clang
 
@@ -49,10 +58,10 @@ then
     echo "#### Now building native export template(s). ####"
     if [ $template_type == 'BOTH' ]
     then
-        scons platform="$platform" arch="$arch" target=template_debug module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
-        scons platform="$platform" arch="$arch" target=template_release module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+        scons platform="$platform" arch="$arch" target=template_debug dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+        scons platform="$platform" arch="$arch" target=template_release dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
     else
-        scons platform="$platform" arch="$arch" target="$template_type" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+        scons platform="$platform" arch="$arch" target="$template_type" dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
     fi
 
     cd bin/
@@ -88,7 +97,7 @@ else
         read b_gd_voxel
     else # if only rebuilding/creating templates, simply rename existing godot folder.
         echo "Welcome to the Cult of the Blue Robot."
-        echo "Choose your Godot version (e.g. 4.1-stable, 4.1, master)"
+        echo "Choose your Godot version (e.g. 4.1.2-stable, 4.1, master)"
         read godot_version
         cd ..
         mv godot-* godot
@@ -115,6 +124,15 @@ else
     fi
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read b_dotnet
+    echo "Enable dev_mode for warnings as errors and unit testing? (y/n)"
+    read b_devmode
+    if [ $b_devmode == "n" ]
+    then
+        echo "Enable production mode for better optimization and portability? (y/n)"
+        read b_optimize
+    else
+        b_optimize="n"
+    fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read b_clang
     echo "Launch editor upon completion? (y/n)"
@@ -123,7 +141,7 @@ else
     if [ $build_type == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean platform="$platform" arch="$arch" target=editor module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+        scons --clean platform="$platform" arch="$arch" dev_mode="$b_devmode" production="$b_optimize" target=editor module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
     fi
 
     if [ $build_type == "build" ]
@@ -182,7 +200,7 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons platform="$platform" arch="$arch" target=editor module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+    scons platform="$platform" arch="$arch" target=editor dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
 
     # final godotsteam setup if enabled
     if [ $build_type == 'build' ] && [ $b_gd_steam == 'y' ] 
@@ -208,10 +226,10 @@ else
         echo "#### Now building native export template(s). ####"
         if [ $template_type == 'BOTH' ]
         then
-            scons platform="$platform" arch="$arch" target=template_debug module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
-            scons platform="$platform" arch="$arch" target=template_release module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+            scons platform="$platform" arch="$arch" target=template_debug dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+            scons platform="$platform" arch="$arch" target=template_release dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
         else
-            scons platform="$platform" arch="$arch" target="$template_type" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
+            scons platform="$platform" arch="$arch" target="$template_type" dev_mode="$b_devmode" production="$b_optimize" module_mono_enabled="$b_dotnet" use_llvm="$b_clang" -j"$threadcount"
         fi
     fi
 
