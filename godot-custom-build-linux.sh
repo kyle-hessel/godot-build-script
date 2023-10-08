@@ -33,17 +33,24 @@ then
     read TEMPLATE_TYPE
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read B_DOTNET
-    echo "Enable dev_mode for warnings as errors and unit testing? (y/n) This is useful when doing engine development. NOTE: seems to not play well with some modules."
+    echo "Enable dev_mode for warnings as errors and unit testing? (yes/no) This is useful when doing engine development. NOTE: seems to not play well with some modules."
     read B_DEVMODE
-    if [ $B_DEVMODE == "n" ]
+    if [ $B_DEVMODE == "no" ]
     then
         B_DEVBUILD="no"
         echo "Enable production mode for better optimization and portability? (yes/no) This is useful for exporting final game builds."
         read B_OPTIMIZE
     else
-        B_OPTIMIZE="n"
+        B_OPTIMIZE="no"
         echo "Enable dev_build mode for disabling optimization and enabling debug symbols? (yes/no) Also useful for engine development. NOTE: seems to not play well with some modules."
         read B_DEVBUILD
+        if [ $B_DEVBUILD == "yes" ]
+        then
+            echo "Additionally enable debugging symbols for debugger and profiler support? (yes/no)"
+            read B_DEBUGSYMBOLS
+        else
+            B_DEBUGSYMBOLS="no"
+        fi
     fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
@@ -61,10 +68,10 @@ then
     echo "#### Now building native export template(s). ####"
     if [ $TEMPLATE_TYPE == 'BOTH' ]
     then
-        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     else
-        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     cd bin/
@@ -127,17 +134,24 @@ else
     fi
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read B_DOTNET
-    echo "Enable dev_mode for warnings as errors and unit testing? (yes/no)"
+    echo "Enable dev_mode for warnings as errors and unit testing? (yes/no) This is useful when doing engine development. NOTE: seems to not play well with some modules."
     read B_DEVMODE
     if [ $B_DEVMODE == "no" ]
     then
         B_DEVBUILD="no"
-        echo "Enable production mode for better optimization and portability? (yes/no)"
+        echo "Enable production mode for better optimization and portability? (yes/no) This is useful for exporting final game builds."
         read B_OPTIMIZE
     else
         B_OPTIMIZE="no"
-        echo "Enable dev_build mode for disabling optimization and enabling extra debug symbols? (yes/no) NOTE: seems to not play well with some modules."
+        echo "Enable dev_build mode for disabling optimization and enabling debug symbols? (yes/no) Also useful for engine development. NOTE: seems to not play well with some modules."
         read B_DEVBUILD
+        if [ $B_DEVBUILD == "yes" ]
+        then
+            echo "Additionally enable debugging symbols for debugger and profiler support? (yes/no)"
+            read B_DEBUGSYMBOLS
+        else
+            B_DEBUGSYMBOLS="no"
+        fi
     fi
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
@@ -147,7 +161,7 @@ else
     if [ $BUILD_TYPE == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     if [ $BUILD_TYPE == "build" ]
@@ -206,7 +220,7 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
 
     # final godotsteam setup if enabled
     if [ $BUILD_TYPE == 'build' ] && [ $B_GD_STEAM == 'y' ] 
@@ -237,10 +251,10 @@ else
         echo "#### Now building native export template(s). ####"
         if [ $TEMPLATE_TYPE == 'BOTH' ]
         then
-            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         else
-            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         fi
     fi
 
