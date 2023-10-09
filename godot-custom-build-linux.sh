@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: optimize old file deletion, optimization levels, debugging symbols, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: optimize old file deletion, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -29,6 +29,12 @@ then
     read CUSTOM
     echo "How many threads would you like to use for building?"
     read THREADCOUNT
+    echo "Do you want PCK encryption support? (y/n)"
+    read B_ENCRYPT
+    if [ $B_ENCRYPT == "y" ]
+    then
+        export SCRIPT_AES256_ENCRYPTION_KEY="8198992e4523238ab8f520d65b7c54b83347c33a6897855547e3639a594d6a91"
+    fi
     echo "Choose template type (template_debug/template_release/BOTH)"
     read TEMPLATE_TYPE
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
@@ -134,6 +140,12 @@ else
     then
         echo "Choose template type (template_debug/template_release/BOTH)"
         read TEMPLATE_TYPE
+        echo "Do you want PCK encryption support? (y/n)"
+        read B_ENCRYPT
+        if [ $B_ENCRYPT == "y" ]
+        then
+            export SCRIPT_AES256_ENCRYPTION_KEY="8198992e4523238ab8f520d65b7c54b83347c33a6897855547e3639a594d6a91"
+        fi
     fi
     echo "Enable .NET (C#) support? (yes/no) NOTE: requires .NET SDK 6/7 to be installed, ~/.dotnet may also need to be in PATH."
     read B_DOTNET
