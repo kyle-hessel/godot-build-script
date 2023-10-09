@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: optimize old file deletion, export cross-compilation, PCK encryption, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: optimize old file deletion, export cross-compilation, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -21,8 +21,13 @@ then
     echo "Below settings should match existing build (I need to learn how to cache this)."
     echo "Choose your Godot version (e.g. 4.1.2-stable, 4.1, master)"
     read GODOT_VERSION
-    echo "What platform are you building for? (linuxbsd, windows, server, etc.)"
+    echo "What platform are you building for? (linuxbsd, windows, macos, server, etc.)"
     read PLATFORM
+    if [ $PLATFORM == "macos" ]
+    then
+        echo "NOTE: If osxcross initial setup is struggling, try installing the libbz2-dev package for SDK extraction."
+        export OSXCROSS_ROOT="$HOME/osxcross"
+    fi
     echo "What architecture are you building on? (x86_64, arm64, rv64, wasm32, etc.)"
     read ARCH
     echo "Are you using custom modules?"
@@ -102,6 +107,7 @@ else
 
         # community engine modules
         echo "Do you want Godot Steam? (y/n) NOTE: requires Steamworks SDK to be unzipped in an adjacent folder called steam_sdk, and put your steam_appid.txt in there, too!"
+        echo "Double NOTE: Don't cross-compile on Linux for Windows using MinGW with this module; compile natively on Windows using MSVC instead. See GodotSteam Github note."
         read B_GD_STEAM
 
         echo "Do you want LimboAI? (y/n)"
@@ -128,8 +134,13 @@ else
     fi
 
     # build options
-    echo "What platform are you building for? (linuxbsd, windows, server, etc.)"
+    echo "What platform are you building for? (linuxbsd, windows, macos, server, etc.)"
     read PLATFORM
+    if [ $PLATFORM == "macos" ]
+    then
+        echo "NOTE: If osxcross initial setup is struggling, try installing the libbz2-dev package for SDK extraction."
+        export OSXCROSS_ROOT="$HOME/osxcross"
+    fi
     echo "What architecture are you building on? (x86_64, arm64, rv64, wasm32, etc.)"
     read ARCH
     echo "How many threads would you like to use for building?"
@@ -173,8 +184,13 @@ else
     read OPT_LEVEL
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
-    echo "Launch editor upon completion? (y/n)"
-    read B_EDITOR
+    if [ $PLATFORM == "linuxbsd" ]
+    then
+        echo "Launch editor upon completion? (y/n)"
+        read B_EDITOR
+    else
+        B_EDITOR="n"
+    fi
 
     if [ $BUILD_TYPE == "rebuild" ]
     then
