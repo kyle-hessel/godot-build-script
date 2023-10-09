@@ -38,6 +38,7 @@ then
     if [ $B_DEVMODE == "no" ]
     then
         B_DEVBUILD="no"
+        B_DEBUGSYMBOLS="no"
         echo "Enable production mode for better optimization and portability? (yes/no) This is useful for exporting final game builds."
         read B_OPTIMIZE
     else
@@ -52,6 +53,8 @@ then
             B_DEBUGSYMBOLS="no"
         fi
     fi
+    echo "Choose an optimization level. This should align well with previous choices. (speed_trace/speed/size/debug/none)"
+    read OPT_LEVEL
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
 
@@ -68,10 +71,10 @@ then
     echo "#### Now building native export template(s). ####"
     if [ $TEMPLATE_TYPE == 'BOTH' ]
     then
-        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     else
-        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     cd bin/
@@ -139,6 +142,7 @@ else
     if [ $B_DEVMODE == "no" ]
     then
         B_DEVBUILD="no"
+        B_DEBUGSYMBOLS="no"
         echo "Enable production mode for better optimization and portability? (yes/no) This is useful for exporting final game builds."
         read B_OPTIMIZE
     else
@@ -153,6 +157,8 @@ else
             B_DEBUGSYMBOLS="no"
         fi
     fi
+    echo "Choose an optimization level. This should align well with previous choices. (speed_trace/speed/size/debug/none)"
+    read OPT_LEVEL
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
     echo "Launch editor upon completion? (y/n)"
@@ -161,7 +167,7 @@ else
     if [ $BUILD_TYPE == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
     fi
 
     if [ $BUILD_TYPE == "build" ]
@@ -220,7 +226,7 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
 
     # final godotsteam setup if enabled
     if [ $BUILD_TYPE == 'build' ] && [ $B_GD_STEAM == 'y' ] 
@@ -251,10 +257,10 @@ else
         echo "#### Now building native export template(s). ####"
         if [ $TEMPLATE_TYPE == 'BOTH' ]
         then
-            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         else
-            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
         fi
     fi
 
