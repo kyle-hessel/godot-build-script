@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TODO: optimize old file deletion, export cross-compilation, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# TODO: pyston support(?), mold support(?), optimize old file deletion, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -66,6 +66,8 @@ then
     fi
     echo "Choose an optimization level. This should align well with previous choices. (speed_trace/speed/size/debug/none)"
     read OPT_LEVEL
+    echo "Use single or double precision? (single/double)"
+    read PRECISION_LEVEL
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
 
@@ -82,10 +84,10 @@ then
     echo "#### Now building native export template(s). ####"
     if [ $TEMPLATE_TYPE == 'BOTH' ]
     then
-        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     else
-        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     fi
 
     cd bin/
@@ -182,6 +184,8 @@ else
     fi
     echo "Choose an optimization level. This should align well with previous choices. (speed_trace/speed/size/debug/none)"
     read OPT_LEVEL
+    echo "Use single or double precision? (single/double)"
+    read PRECISION_LEVEL
     echo "Use Clang instead of GCC to compile? (yes/no)"
     read B_CLANG
     if [ $PLATFORM == "linuxbsd" ]
@@ -195,7 +199,7 @@ else
     if [ $BUILD_TYPE == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     fi
 
     if [ $BUILD_TYPE == "build" ]
@@ -254,7 +258,7 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
 
     # final godotsteam setup if enabled
     if [ $BUILD_TYPE == 'build' ] && [ $B_GD_STEAM == 'y' ] 
@@ -271,13 +275,50 @@ else
     then
         echo "#### Generating .NET glue. ####"
         mkdir ~/.local/share/godot/mono/GodotNuGetFallbackFolder
-        if [ $B_DEVBUILD == 'yes' ]
+        # this nightmare should be rewritten when I suck less at shell scripting
+        if [ $B_CLANG == 'yes' ]
         then
-            ./bin/godot."$PLATFORM".editor.dev."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+            if [ $PRECISION_LEVEL == 'double' ]
+            then
+                if [ $B_DEVBUILD == 'yes' ]
+                then
+                    ./bin/godot."$PLATFORM".editor.dev.double."$ARCH".llvm.mono --headless --generate-mono-glue modules/mono/glue
+                else
+                    ./bin/godot."$PLATFORM".editor.double."$ARCH".llvm.mono --headless --generate-mono-glue modules/mono/glue
+                fi
+            else
+                if [ $B_DEVBUILD == 'yes' ]
+                then
+                    ./bin/godot."$PLATFORM".editor.dev."$ARCH".llvm.mono --headless --generate-mono-glue modules/mono/glue
+                else
+                    ./bin/godot."$PLATFORM".editor."$ARCH".llvm.mono --headless --generate-mono-glue modules/mono/glue
+                fi
+            fi
         else
-            ./bin/godot."$PLATFORM".editor."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+            if [ $PRECISION_LEVEL == 'double' ]
+            then
+                if [ $B_DEVBUILD == 'yes' ]
+                then
+                    ./bin/godot."$PLATFORM".editor.dev.double."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+                else
+                    ./bin/godot."$PLATFORM".editor.double."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+                fi
+            else
+                if [ $B_DEVBUILD == 'yes' ]
+                then
+                    ./bin/godot."$PLATFORM".editor.dev."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+                else
+                    ./bin/godot."$PLATFORM".editor."$ARCH".mono --headless --generate-mono-glue modules/mono/glue
+                fi
+            fi
         fi
-        ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource
+
+        if [ $PRECISION_LEVEL == 'double' ]
+        then
+            ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource --godot-platform="$PLATFORM" --precision=double
+        else
+            ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin --push-nupkgs-local ~/MyLocalNugetSource --godot-platform="$PLATFORM"
+        fi
     fi
 
     if [ $TEMPLATES == 'y' ]
@@ -285,10 +326,10 @@ else
         echo "#### Now building native export template(s). ####"
         if [ $TEMPLATE_TYPE == 'BOTH' ]
         then
-            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
-            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         else
-            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" -j"$THREADCOUNT"
+            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         fi
     fi
 
@@ -299,39 +340,80 @@ else
     then
         echo "#### Lauching Godot editor. Safe travels! ####"
 
-        if [ $B_DEVBUILD == 'yes' ]
+        # this nightmare can be ignored and should be rewritten when I suck less at shell scripting
+        if [ $PRECISION_LEVEL == 'double' ]
         then
-            if [ $B_CLANG == 'yes' ]
+            if [ $B_DEVBUILD == 'yes' ]
             then
-                if [ $B_DOTNET == 'yes' ]
+                if [ $B_CLANG == 'yes' ]
                 then
-                    ./godot."$PLATFORM".editor.dev."$ARCH".llvm.mono
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.dev.double."$ARCH".llvm.mono
+                    else
+                        ./godot."$PLATFORM".editor.dev.double."$ARCH".llvm
+                    fi
                 else
-                    ./godot."$PLATFORM".editor.dev."$ARCH".llvm
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.dev.double."$ARCH".mono
+                    else
+                        ./godot."$PLATFORM".editor.dev.double."$ARCH"
+                    fi
                 fi
             else
-                if [ $B_DOTNET == 'yes' ]
+                if [ $B_CLANG == 'yes' ]
                 then
-                    ./godot."$PLATFORM".editor.dev."$ARCH".mono
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.double."$ARCH".llvm.mono
+                    else
+                        ./godot."$PLATFORM".editor.double."$ARCH".llvm
+                    fi
                 else
-                    ./godot."$PLATFORM".editor.dev."$ARCH"
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.double."$ARCH".mono
+                    else
+                        ./godot."$PLATFORM".editor.double."$ARCH"
+                    fi
                 fi
             fi
         else
-            if [ $B_CLANG == 'yes' ]
+            if [ $B_DEVBUILD == 'yes' ]
             then
-                if [ $B_DOTNET == 'yes' ]
+                if [ $B_CLANG == 'yes' ]
                 then
-                    ./godot."$PLATFORM".editor."$ARCH".llvm.mono
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.dev."$ARCH".llvm.mono
+                    else
+                        ./godot."$PLATFORM".editor.dev."$ARCH".llvm
+                    fi
                 else
-                    ./godot."$PLATFORM".editor."$ARCH".llvm
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor.dev."$ARCH".mono
+                    else
+                        ./godot."$PLATFORM".editor.dev."$ARCH"
+                    fi
                 fi
             else
-                if [ $B_DOTNET == 'yes' ]
+                if [ $B_CLANG == 'yes' ]
                 then
-                    ./godot."$PLATFORM".editor."$ARCH".mono
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor."$ARCH".llvm.mono
+                    else
+                        ./godot."$PLATFORM".editor."$ARCH".llvm
+                    fi
                 else
-                    ./godot."$PLATFORM".editor."$ARCH"
+                    if [ $B_DOTNET == 'yes' ]
+                    then
+                        ./godot."$PLATFORM".editor."$ARCH".mono
+                    else
+                        ./godot."$PLATFORM".editor."$ARCH"
+                    fi
                 fi
             fi
         fi
