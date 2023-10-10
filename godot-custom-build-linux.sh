@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# TODO: pyston support(?), mold support(?), optimize old file deletion, more testing in different target modes, double-precision support (scons precision=double - and for .NET! check docs) etc.
+# Godot Custom Linux Build Script 1.0
+# Created by Polluted Mind
+# TODO: optimize old file deletion, option for git pull on rebuild, more testing in different target modes
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -23,7 +25,7 @@ then
     read GODOT_VERSION
     echo "What platform are you building for? (linuxbsd, windows, macos, server, etc.)"
     read PLATFORM
-    if [ $PLATFORM == "macos" ]
+    if [ $PLATFORM == "macos" ] # currently unsupported for cross-compile due to MoltenVK errors.
     then
         echo "NOTE: If osxcross initial setup is struggling, try installing the libbz2-dev package for SDK extraction."
         export OSXCROSS_ROOT="$HOME/osxcross"
@@ -68,8 +70,13 @@ then
     read OPT_LEVEL
     echo "Use single or double precision? (single/double)"
     read PRECISION_LEVEL
-    echo "Use Clang instead of GCC to compile? (yes/no)"
-    read B_CLANG
+    if [ $B_OPTIMIZE == 'no' ]
+    then
+        echo "Use Clang instead of GCC to compile? (yes/no)"
+        read B_CLANG
+    else
+        B_CLANG="no"
+    fi
 
     cd godot/
 
@@ -81,13 +88,13 @@ then
         mv ../godot ../godot-"$GODOT_VERSION"
     fi
 
-    echo "#### Now building native export template(s). ####"
+    echo "#### Now building export template(s). ####"
     if [ $TEMPLATE_TYPE == 'BOTH' ]
     then
-        scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
-        scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        pyston-scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        pyston-scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     else
-        scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        pyston-scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     fi
 
     cd bin/
@@ -138,7 +145,7 @@ else
     # build options
     echo "What platform are you building for? (linuxbsd, windows, macos, server, etc.)"
     read PLATFORM
-    if [ $PLATFORM == "macos" ]
+    if [ $PLATFORM == "macos" ] # currently unsupported for cross-compile due to MoltenVK errors.
     then
         echo "NOTE: If osxcross initial setup is struggling, try installing the libbz2-dev package for SDK extraction."
         export OSXCROSS_ROOT="$HOME/osxcross"
@@ -186,8 +193,13 @@ else
     read OPT_LEVEL
     echo "Use single or double precision? (single/double)"
     read PRECISION_LEVEL
-    echo "Use Clang instead of GCC to compile? (yes/no)"
-    read B_CLANG
+    if [ $B_OPTIMIZE == 'no' ]
+    then
+        echo "Use Clang instead of GCC to compile? (yes/no)"
+        read B_CLANG
+    else
+        B_CLANG="no"
+    fi
     if [ $PLATFORM == "linuxbsd" ]
     then
         echo "Launch editor upon completion? (y/n)"
@@ -199,7 +211,12 @@ else
     if [ $BUILD_TYPE == "rebuild" ]
     then
         echo "#### Now cleaning up generated files from previous build. ####"
-        scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        if [ $B_OPTIMIZE == 'yes' ]
+        then
+            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        else
+            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        fi
     fi
 
     if [ $BUILD_TYPE == "build" ]
@@ -258,7 +275,12 @@ else
 
     echo "#### Now building Godot. ####"
 
-    scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+    if [ $B_OPTIMIZE == 'yes' ]
+    then
+        pyston-scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+    else
+        pyston-scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+    fi
 
     # final godotsteam setup if enabled
     if [ $BUILD_TYPE == 'build' ] && [ $B_GD_STEAM == 'y' ] 
@@ -323,13 +345,13 @@ else
 
     if [ $TEMPLATES == 'y' ]
     then
-        echo "#### Now building native export template(s). ####"
+        echo "#### Now building export template(s). ####"
         if [ $TEMPLATE_TYPE == 'BOTH' ]
         then
-            scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
-            scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            pyston-scons platform="$PLATFORM" arch="$ARCH" target=template_debug dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            pyston-scons platform="$PLATFORM" arch="$ARCH" target=template_release dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         else
-            scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            pyston-scons platform="$PLATFORM" arch="$ARCH" target="$TEMPLATE_TYPE" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         fi
     fi
 
