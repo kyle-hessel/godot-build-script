@@ -293,19 +293,19 @@ else
     # If optimizing, don't use LLVM and use default linker.
     if [ $B_OPTIMIZE == 'yes' ]
     then
-        pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        pyston-scons platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
     # Otherwise, determine if mold/lld/ld is used or not.
     else
         if [ $B_MOLD == 'y' ]
         then
-            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            pyston-scons platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         else
             # If not using mold, use lld with clang & LLVM and just use the default (ld) with GCC.
             if [ $B_CLANG == 'yes' ]
             then
-                pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=lld precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+                pyston-scons platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=lld precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
             else
-                pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+                pyston-scons platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
             fi
         fi
     fi
