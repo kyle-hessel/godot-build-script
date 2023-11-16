@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Godot Custom Linux Build Script 1.0
 # Created by Polluted Mind
-# TODO: optimize old file deletion, option for git pull on rebuild, more testing in different target modes
+# TODO: optimize old file deletion, option to not include modules without further prompts, option for git pull on rebuild, more testing in different target modes
 
 echo "Welcome to the Cult of the Blue Robot."
 
@@ -72,10 +72,13 @@ then
     read PRECISION_LEVEL
     if [ $B_OPTIMIZE == 'no' ]
     then
-        echo "Use Clang instead of GCC to compile? (yes/no)"
+        echo "Use Clang & LLVM instead of GCC to compile? (yes/no)"
         read B_CLANG
+        echo "Use the Mold linker for faster compiles? (yes/no) This may not work on all systems after setup."
+        read B_MOLD
     else
         B_CLANG="no"
+        B_MOLD="no"
     fi
 
     cd godot/
@@ -195,10 +198,13 @@ else
     read PRECISION_LEVEL
     if [ $B_OPTIMIZE == 'no' ]
     then
-        echo "Use Clang instead of GCC to compile? (yes/no)"
+        echo "Use Clang & LLVM instead of GCC to compile? (yes/no)"
         read B_CLANG
+        echo "Use the Mold linker for faster compiles? (y/n) This may not work on all systems after setup."
+        read B_MOLD
     else
         B_CLANG="no"
+        B_MOLD="no"
     fi
     if [ $PLATFORM == "linuxbsd" ]
     then
@@ -213,9 +219,19 @@ else
         echo "#### Now cleaning up generated files from previous build. ####"
         if [ $B_OPTIMIZE == 'yes' ]
         then
-            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
         else
-            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            if [ $B_MOLD == 'y' ]
+            then
+                pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            else
+                if [ $B_CLANG == 'yes' ]
+                then
+                    pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=lld precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+                else
+                    pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+                fi
+            fi
         fi
     fi
 
@@ -274,12 +290,24 @@ else
     fi
 
     echo "#### Now building Godot. ####"
-
+    # If optimizing, don't use LLVM and use default linker.
     if [ $B_OPTIMIZE == 'yes' ]
     then
-        pyston-scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+    # Otherwise, determine if mold/lld/ld is used or not.
     else
-        pyston-scons platform="$PLATFORM" arch="$ARCH" target=editor dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        if [ $B_MOLD == 'y' ]
+        then
+            pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=mold precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+        else
+            # If not using mold, use lld with clang & LLVM and just use the default (ld) with GCC.
+            if [ $B_CLANG == 'yes' ]
+            then
+                pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm="$B_CLANG" linker=lld precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            else
+                pyston-scons --clean platform="$PLATFORM" arch="$ARCH" dev_mode="$B_DEVMODE" dev_build="$B_DEVBUILD" debug_symbols="$B_DEBUGSYMBOLS" production="$B_OPTIMIZE" optimize="$OPT_LEVEL" target=editor module_mono_enabled="$B_DOTNET" use_llvm=no precision="$PRECISION_LEVEL" -j"$THREADCOUNT"
+            fi
+        fi
     fi
 
     # final godotsteam setup if enabled
