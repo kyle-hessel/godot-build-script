@@ -134,11 +134,11 @@ then
 
     if [ $B_OPTIMIZE == 'no' ]
     then
-        echo "Use Clang & LLVM instead of GCC to compile? (YES/no)"
+        echo "Use Clang & LLVM instead of GCC to compile? (yes/NO)"
         read B_CLANG
         if [ "$B_CLANG" == "" ]
         then
-            B_CLANG="yes"
+            B_CLANG="no"
         fi
         echo "Use the Mold linker for faster compiles? (yes/NO) This may not work on all systems after setup."
         read B_MOLD
@@ -356,11 +356,11 @@ else
 
     if [ $B_OPTIMIZE == 'no' ]
     then
-        echo "Use Clang & LLVM instead of GCC to compile? (YES/no)"
+        echo "Use Clang & LLVM instead of GCC to compile? (yes/NO)"
         read B_CLANG
         if [ "$B_CLANG" == "" ]
         then
-            B_CLANG="yes"
+            B_CLANG="no"
         fi
         echo "Use the Mold linker for faster compiles? (y/N) This may not work on all systems after setup."
         read B_MOLD
