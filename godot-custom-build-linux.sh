@@ -30,7 +30,7 @@ then
     read GODOT_VERSION
     if [ "$GODOT_VERSION" == "" ]
     then
-        GODOT_VERSION="4.1.3-stable"
+        GODOT_VERSION="4.2-stable"
     fi
     echo "What platform are you building for? (LINUXBSD, windows, macos, server, etc.)"
     read PLATFORM
@@ -188,7 +188,7 @@ else
         read GODOT_VERSION
         if [ "$GODOT_VERSION" == "" ]
         then
-            GODOT_VERSION="4.1.3-stable"
+            GODOT_VERSION="4.2-stable"
         fi
         
         echo "Include community modules? (y/N)"
@@ -239,7 +239,7 @@ else
         read GODOT_VERSION
         if [ "$GODOT_VERSION" == "" ]
         then
-            GODOT_VERSION="4.1.3-stable"
+            GODOT_VERSION="4.2-stable"
         fi
         cd ..
         mv godot-* godot
@@ -412,6 +412,17 @@ else
         git clone https://github.com/godotengine/godot.git -b "$GODOT_VERSION"
 
         # clone modules, copy each into godot modules folder
+        if [ "$B_LIMBOAI" == 'y' ]
+        then
+            if [ $B_LIMBOAI_NIGHTLY == 'y' ]
+            then
+                git clone https://github.com/limbonaut/limboai.git -b master
+            else
+                git clone https://github.com/limbonaut/limboai.git -b v0.5
+            fi
+            cp -rv limboai/ godot/modules/
+        fi
+
         if [ "$B_GD_STEAM" == 'y' ] 
         then
             git clone https://github.com/CoaguCo-Industries/GodotSteam.git -b v4.4.1
@@ -421,17 +432,6 @@ else
             mkdir godot/modules/godotsteam/sdk
             cp -rv steam_sdk/sdk/public/ godot/modules/godotsteam/sdk/
             cp -rv steam_sdk/sdk/redistributable_bin/ godot/modules/godotsteam/sdk/
-        fi
-
-        if [ "$B_LIMBOAI" == 'y' ]
-        then
-            if [ $B_LIMBOAI_NIGHTLY == 'y' ]
-            then
-                git clone https://github.com/limbonaut/limboai.git -b master
-            else
-                git clone https://github.com/limbonaut/limboai.git -b v0.4.2-stable
-            fi
-            cp -rv limboai/ godot/modules/
         fi
 
         if [ "$B_GD_VOXEL" == 'y' ]
